@@ -14,7 +14,7 @@ VERIFY_TOKEN = "ABCD1234"
 processed_comments = set()
 
 
-REPLY_TEXT = "❤️ لا تنسى متابعة الصفحة لتتوصل بكل جديد!"
+REPLY_TEXT = "شُڪرٍا عٍلُِى تعٍلُِيقٌڪ ❤️ لُِا تنسى متابَعٍة الُِصفُحٍة لُِتتوُصلُِ بَڪلُِ جٍدِيدِ!"
 
 
 @app.route("/", methods=["GET"])
