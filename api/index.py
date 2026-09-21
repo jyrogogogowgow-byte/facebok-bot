@@ -5,8 +5,8 @@ import json
 
 app = Flask(__name__)
 
-PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
-VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN", "ABCD1234")
+PAGE_ACCESS_TOKEN = "EAATLbkq5LgwBSpHYpd3rSvFUdbUpa7lWIJlZALcCHpi8NCrpaa6qS39dpREZCAdY5BSnRuIHIRGXVZARNd6b35vMsNQYCoirKZABvXz7zQhSb72mynaSxroIiAvV6cPnM8AAlmeFTmOiaDpZBWZA2pC7eT3m9zsOCJQKkkirZAjZCLbWILcdt97ioIPcuUJ2nOfaYtigjQZDZD"
+VERIFY_TOKEN = "ABCD1234"
 
 
 @app.route("/", methods=["GET"])
