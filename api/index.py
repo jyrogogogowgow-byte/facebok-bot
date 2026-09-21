@@ -6,7 +6,7 @@ import json
 app = Flask(__name__)
 
 PAGE_ACCESS_TOKEN = "EAATLbkq5LgwBSpHYpd3rSvFUdbUpa7lWIJlZALcCHpi8NCrpaa6qS39dpREZCAdY5BSnRuIHIRGXVZARNd6b35vMsNQYCoirKZABvXz7zQhSb72mynaSxroIiAvV6cPnM8AAlmeFTmOiaDpZBWZA2pC7eT3m9zsOCJQKkkirZAjZCLbWILcdt97ioIPcuUJ2nOfaYtigjQZDZD"
-VERIFY_TOKEN = "ABCD1234"
+VERIFY_TOKEN = ""
 
 
 # تخزين مؤقت داخل نفس الـinstance
