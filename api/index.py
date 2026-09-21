@@ -9,12 +9,23 @@ PAGE_ACCESS_TOKEN = "EAATLbkq5LgwBSpHYpd3rSvFUdbUpa7lWIJlZALcCHpi8NCrpaa6qS39dpR
 VERIFY_TOKEN = "ABCD1234"
 
 
+# تخزين مؤقت داخل نفس الـinstance
+# سنستعمل comment_id لمنع التكرار أثناء حياة الـinstance
+processed_comments = set()
+
+
+REPLY_TEXT = "❤️ لا تنسى متابعة الصفحة لتتوصل بكل جديد!"
+
+
 @app.route("/", methods=["GET"])
 def home():
-    return "Facebook Bot Online", 200
+    return "Facebook Comment Bot Online ❤️", 200
 
 
-# Facebook Webhook verification
+# =========================
+# WEBHOOK VERIFICATION
+# =========================
+
 @app.route("/webhook", methods=["GET"])
 def verify():
 
@@ -28,71 +39,113 @@ def verify():
     return "Forbidden", 403
 
 
-# Facebook messages
+# =========================
+# FACEBOOK WEBHOOK
+# =========================
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
 
     payload = request.get_json(silent=True)
 
-    print("========== PAYLOAD ==========")
+    print("\n========== FACEBOOK PAYLOAD ==========")
     print(json.dumps(payload, indent=2, ensure_ascii=False))
-    print("=============================")
+    print("======================================\n")
 
     if not payload:
         return "OK", 200
 
+    # نتأكد أنه Page webhook
     if payload.get("object") != "page":
         return "OK", 200
 
-    # كل entry
     for entry in payload.get("entry", []):
 
-        # كل message
-        for event in entry.get("messaging", []):
+        changes = entry.get("changes", [])
 
-            sender_id = event.get("sender", {}).get("id")
+        for change in changes:
 
-            if not sender_id:
+            # خاصنا comments
+            if change.get("field") != "feed":
                 continue
 
-            # نرجعو نفس event كامل للمستخدم
-            reply = json.dumps(
-                event,
-                indent=2,
-                ensure_ascii=False
-            )
+            value = change.get("value", {})
 
-            send_message(sender_id, reply)
+            # نتأكد أن الحدث ديال comment
+            if value.get("item") != "comment":
+                continue
+
+            # بعض الأحداث تكون creation
+            verb = value.get("verb")
+
+            if verb and verb != "add":
+                continue
+
+            comment_id = value.get("comment_id")
+
+            if not comment_id:
+                print("No comment_id")
+                continue
+
+            # =========================
+            # منع تكرار الرد
+            # =========================
+
+            if comment_id in processed_comments:
+
+                print("Already processed:", comment_id)
+
+                continue
+
+            # نسجلو التعليق
+            processed_comments.add(comment_id)
+
+            # =========================
+            # الرد على التعليق
+            # =========================
+
+            reply_to_comment(comment_id)
+
 
     return "EVENT_RECEIVED", 200
 
 
-def send_message(sender_id, text):
+# =========================
+# REPLY TO COMMENT
+# =========================
 
-    url = "https://graph.facebook.com/v23.0/me/messages"
+def reply_to_comment(comment_id):
 
-    params = {
+    url = f"https://graph.facebook.com/{comment_id}/comments"
+
+    data = {
+        "message": REPLY_TEXT,
         "access_token": PAGE_ACCESS_TOKEN
     }
 
-    data = {
-        "recipient": {
-            "id": sender_id
-        },
-        "message": {
-            "text": text
-        }
-    }
+    try:
 
-    r = requests.post(
-        url,
-        params=params,
-        json=data,
-        timeout=20
-    )
+        response = requests.post(
+            url,
+            data=data,
+            timeout=15
+        )
 
-    print("Facebook:", r.status_code, r.text)
+        print("COMMENT ID:", comment_id)
+        print("REPLY STATUS:", response.status_code)
+        print("REPLY RESPONSE:", response.text)
 
+    except Exception as e:
+
+        print("Reply error:", str(e))
+
+
+# =========================
+# VERCEL
+# =========================
 
 if __name__ == "__main__":
-    app.run()
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8080))
+    )
