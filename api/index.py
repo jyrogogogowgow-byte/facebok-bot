@@ -5,46 +5,16 @@ import json
 
 app = Flask(__name__)
 
-PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN", "")
+PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
 VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN", "ABCD1234")
 
 
-# =========================
-# إرسال رسالة للمستخدم
-# =========================
-def send_message(recipient_id, text):
-
-    url = "https://graph.facebook.com/v23.0/me/messages"
-
-    params = {
-        "access_token": PAGE_ACCESS_TOKEN
-    }
-
-    payload = {
-        "recipient": {
-            "id": recipient_id
-        },
-        "message": {
-            "text": text
-        }
-    }
-
-    response = requests.post(
-        url,
-        params=params,
-        json=payload,
-        timeout=20
-    )
-
-    print("SEND STATUS:", response.status_code)
-    print("SEND RESPONSE:", response.text)
-
-    return response
+@app.route("/", methods=["GET"])
+def home():
+    return "Facebook Bot Online", 200
 
 
-# =========================
-# Webhook Verification
-# =========================
+# Facebook Webhook verification
 @app.route("/webhook", methods=["GET"])
 def verify():
 
@@ -55,64 +25,74 @@ def verify():
     if mode == "subscribe" and token == VERIFY_TOKEN:
         return challenge, 200
 
-    return "Verification failed", 403
+    return "Forbidden", 403
 
 
-# =========================
-# Facebook Webhook
-# =========================
+# Facebook messages
 @app.route("/webhook", methods=["POST"])
 def webhook():
 
-    # ناخدو الـpayload الخام كامل
-    data = request.get_json(silent=True)
+    payload = request.get_json(silent=True)
 
-    print("\n================ WEBHOOK ================")
-    print(json.dumps(data, indent=2, ensure_ascii=False))
-    print("=========================================\n")
+    print("========== PAYLOAD ==========")
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    print("=============================")
 
-    if not data:
+    if not payload:
         return "OK", 200
 
-    # Facebook Messenger
-    if data.get("object") == "page":
+    if payload.get("object") != "page":
+        return "OK", 200
 
-        for entry in data.get("entry", []):
+    # كل entry
+    for entry in payload.get("entry", []):
 
-            for messaging_event in entry.get("messaging", []):
+        # كل message
+        for event in entry.get("messaging", []):
 
-                sender = messaging_event.get("sender", {})
-                sender_id = sender.get("id")
+            sender_id = event.get("sender", {}).get("id")
 
-                if not sender_id:
-                    continue
+            if not sender_id:
+                continue
 
-                # نحول الـpayload كامل إلى JSON readable
-                payload_text = json.dumps(
-                    messaging_event,
-                    indent=2,
-                    ensure_ascii=False
-                )
+            # نرجعو نفس event كامل للمستخدم
+            reply = json.dumps(
+                event,
+                indent=2,
+                ensure_ascii=False
+            )
 
-                # الرد للمستخدم
-                send_message(
-                    sender_id,
-                    payload_text
-                )
+            send_message(sender_id, reply)
 
     return "EVENT_RECEIVED", 200
 
 
-# =========================
-# Home
-# =========================
-@app.route("/", methods=["GET"])
-def home():
-    return "Facebook Bot is running!", 200
+def send_message(sender_id, text):
+
+    url = "https://graph.facebook.com/v23.0/me/messages"
+
+    params = {
+        "access_token": PAGE_ACCESS_TOKEN
+    }
+
+    data = {
+        "recipient": {
+            "id": sender_id
+        },
+        "message": {
+            "text": text
+        }
+    }
+
+    r = requests.post(
+        url,
+        params=params,
+        json=data,
+        timeout=20
+    )
+
+    print("Facebook:", r.status_code, r.text)
 
 
 if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 8080))
-    )
+    app.run()
